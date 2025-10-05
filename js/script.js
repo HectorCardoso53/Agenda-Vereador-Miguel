@@ -15,10 +15,12 @@ const db = getFirestore(app);
 async function listTasks() {
   const selectMes = document.getElementById("selectMes");
   const taskList = document.getElementById("taskList");
+  const filtroStatusSelect = document.getElementById("filtroStatus");
 
-  if (!selectMes || !taskList) return;
+  if (!selectMes || !taskList || !filtroStatusSelect) return;
 
   const mesSelecionado = selectMes.value;
+  const filtroStatus = filtroStatusSelect.value; // 'todos', 'pendentes', 'concluidos'
   taskList.innerHTML = "";
 
   const compromissosRef = collection(db, "agenda", mesSelecionado, "compromissos");
@@ -28,8 +30,17 @@ async function listTasks() {
     const task = docSnap.data();
     const taskId = docSnap.id;
 
+    // ======= Filtro =======
+    if (filtroStatus === "pendentes" && task.concluido) return;
+    if (filtroStatus === "concluidos" && !task.concluido) return;
+
     const listItem = document.createElement("li");
     listItem.classList.add("list-group-item", "d-flex", "justify-content-between", "align-items-start", "mb-2", "shadow-sm");
+
+    // Visual para compromissos concluídos
+    if (task.concluido) {
+      listItem.style.backgroundColor = "#d4edda"; // verde claro
+    }
 
     const taskText = document.createElement("div");
     taskText.innerHTML = `
@@ -94,11 +105,9 @@ async function listTasks() {
     btnShare.classList.add("btn", "btn-sm", "btn-info");
     btnShare.innerHTML = '<i class="bi bi-share-fill"></i>';
     btnShare.addEventListener("click", async () => {
-
-      // Clonar o listItem para gerar a imagem
       const tempCard = listItem.cloneNode(true);
       tempCard.style.position = "absolute";
-      tempCard.style.left = "-9999px"; // tirar da tela
+      tempCard.style.left = "-9999px";
       tempCard.style.backgroundColor = "#f8f9fa";
       tempCard.style.padding = "15px";
       tempCard.style.border = "1px solid #112f79";
@@ -117,10 +126,7 @@ async function listTasks() {
 
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
             try {
-              await navigator.share({
-                files: [file],
-                title: "Compromisso da Agenda",
-              });
+              await navigator.share({ files: [file], title: "Compromisso da Agenda" });
             } catch (error) {
               console.error("Erro ao compartilhar:", error);
             }
@@ -130,10 +136,8 @@ async function listTasks() {
             alert("Seu navegador não suporta compartilhamento direto. A imagem foi aberta em nova aba!");
           }
         });
-
         tempCard.remove();
       });
-
     });
 
     btnRow.appendChild(btnEdit);
@@ -151,6 +155,7 @@ async function listTasks() {
     taskList.appendChild(listItem);
   });
 }
+
 
 
 // =============================
@@ -192,6 +197,11 @@ async function addTask() {
 window.addEventListener("DOMContentLoaded", () => {
   const btnAddTask = document.getElementById("btnAddTask");
   const selectMes = document.getElementById("selectMes");
+  const filtroStatus = document.getElementById("filtroStatus");
+if (filtroStatus) {
+  filtroStatus.addEventListener("change", listTasks);
+}
+
 
   if (btnAddTask) btnAddTask.addEventListener("click", addTask);
   if (selectMes) selectMes.addEventListener("change", listTasks);
