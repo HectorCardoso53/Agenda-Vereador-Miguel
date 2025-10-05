@@ -16,12 +16,11 @@ async function listTasks() {
   const selectMes = document.getElementById("selectMes");
   const taskList = document.getElementById("taskList");
 
-  if (!selectMes || !taskList) return; // Evita erro se elementos não existem
+  if (!selectMes || !taskList) return;
 
   const mesSelecionado = selectMes.value;
   taskList.innerHTML = "";
 
-  // Pega os compromissos apenas do mês selecionado
   const compromissosRef = collection(db, "agenda", mesSelecionado, "compromissos");
   const querySnapshot = await getDocs(compromissosRef);
 
@@ -56,6 +55,7 @@ async function listTasks() {
     const btnRow = document.createElement("div");
     btnRow.classList.add("d-flex", "gap-1");
 
+    // Editar
     const btnEdit = document.createElement("button");
     btnEdit.classList.add("btn", "btn-sm", "btn-warning");
     btnEdit.innerHTML = '<i class="bi bi-pencil-square"></i>';
@@ -78,6 +78,7 @@ async function listTasks() {
       listTasks();
     });
 
+    // Excluir
     const btnDelete = document.createElement("button");
     btnDelete.classList.add("btn", "btn-sm", "btn-danger");
     btnDelete.innerHTML = '<i class="bi bi-trash3-fill"></i>';
@@ -88,8 +89,56 @@ async function listTasks() {
       }
     });
 
+    // Compartilhar como imagem
+    const btnShare = document.createElement("button");
+    btnShare.classList.add("btn", "btn-sm", "btn-info");
+    btnShare.innerHTML = '<i class="bi bi-share-fill"></i>';
+    btnShare.addEventListener("click", async () => {
+
+      // Clonar o listItem para gerar a imagem
+      const tempCard = listItem.cloneNode(true);
+      tempCard.style.position = "absolute";
+      tempCard.style.left = "-9999px"; // tirar da tela
+      tempCard.style.backgroundColor = "#f8f9fa";
+      tempCard.style.padding = "15px";
+      tempCard.style.border = "1px solid #112f79";
+      tempCard.style.borderRadius = "8px";
+      tempCard.style.width = "300px";
+      tempCard.style.fontFamily = "Arial, sans-serif";
+      tempCard.style.color = "#112f79";
+      tempCard.style.boxShadow = "0 0 5px rgba(0,0,0,0.2)";
+      tempCard.style.textAlign = "left";
+
+      document.body.appendChild(tempCard);
+
+      html2canvas(tempCard).then(async (canvas) => {
+        canvas.toBlob(async (blob) => {
+          const file = new File([blob], "compromisso.png", { type: "image/png" });
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                files: [file],
+                title: "Compromisso da Agenda",
+              });
+            } catch (error) {
+              console.error("Erro ao compartilhar:", error);
+            }
+          } else {
+            const url = URL.createObjectURL(blob);
+            window.open(url, "_blank");
+            alert("Seu navegador não suporta compartilhamento direto. A imagem foi aberta em nova aba!");
+          }
+        });
+
+        tempCard.remove();
+      });
+
+    });
+
     btnRow.appendChild(btnEdit);
     btnRow.appendChild(btnDelete);
+    btnRow.appendChild(btnShare);
 
     const leftDiv = document.createElement("div");
     leftDiv.classList.add("d-flex", "align-items-start");
@@ -102,6 +151,7 @@ async function listTasks() {
     taskList.appendChild(listItem);
   });
 }
+
 
 // =============================
 // Adicionar compromisso
@@ -154,10 +204,9 @@ window.addEventListener("DOMContentLoaded", () => {
   ];
   const mesAtual = nomeMeses[hoje.getMonth()] + hoje.getFullYear();
   const option = [...selectMes.options].find(opt => opt.value === mesAtual);
-  if (option) {
-    selectMes.value = mesAtual;
-  }
+  if (option) selectMes.value = mesAtual;
 
   listTasks();
 });
+
 
